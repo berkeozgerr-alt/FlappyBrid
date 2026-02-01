@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Flappy Bird Ultimate System</title>
+<style>
+    body {
+        margin: 0; padding: 0;
+        overflow: hidden;
+        background-color: #333;
+        font-family: 'Courier New', Courier, monospace;
+        user-select: none;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    /* --- MENÜ VE BUTONLAR --- */
+    #startMenu {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: #70c5ce;
+        z-index: 50;
+        display: flex; flex-direction: column; 
+        justify-content: center; align-items: center;
+    }
+    #gameTitle {
+        font-family: "Arial Black", sans-serif;
+        font-size: 60px; color: white;
+        text-shadow: 4px 4px 0 #000; margin-bottom: 20px;
+    }
+    #startBtn {
+        padding: 15px 40px; font-size: 25px; font-weight: bold;
+        background-color: #e67e22; color: white;
+        border: 4px solid white; border-radius: 10px;
+        cursor: pointer; box-shadow: 0 5px 0 #d35400;
+        transition: transform 0.1s;
+    }
+    #startBtn:active { transform: translateY(4px); box-shadow: 0 1px 0 #d35400; }
+
+    #scoreBoard {
+        position: absolute; top: 20px; left: 20px;
+        color: white; font-weight: bold; font-size: 30px;
+        text-shadow: 2px 2px 4px #000; z-index: 10;
+        cursor: pointer;
+    }
+
+    #exitBtn {
+        position: absolute; top: 20px; right: 20px;
+        background-color: #c0392b; color: white;
+        border: 2px solid white; padding: 8px 20px;
+        font-weight: bold; cursor: pointer; z-index: 10;
+        border-radius: 5px; font-family: 'Arial Black', sans-serif;
+    }
+    #exitBtn:hover { background-color: red; }
+
+    #message {
+        position: absolute; top: 40%; width: 100%;
+        text-align: center; color: white;
+        font-family: "Arial Black", sans-serif; font-size: 50px;
+        text-shadow: 4px 4px 8px #000; z-index: 5;
+        display: none; pointer-events: none;
+    }
+
+    /* --- SİYAH HACKER PANELLERİ --- */
+    .hackerOverlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.95);
+        z-index: 100; display: none;
+        flex-direction: column; justify-content: center; align-items: center;
+        color: #00ff00;
+    }
+
+    .panelBox {
+        border: 2px solid #00ff00; padding: 30px;
+        width: 320px; text-align: center;
+        background-color: black;
+        box-shadow: 0 0 25px rgba(0, 255, 0, 0.3);
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    .panelBox h2 { margin-top: 0; border-bottom: 1px dashed #00ff00; padding-bottom: 15px; letter-spacing: 2px; }
+    
+    input.hackInput {
+        padding: 10px; width: 70%; background: #111; color: #00ff00;
+        border: 1px solid #00ff00; margin: 15px 0; font-weight: bold; font-size: 18px; text-align: center; outline: none;
+    }
+    
+    button.hackBtn {
+        padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 16px;
+        background: #00ff00; color: black; border: none; width: 100%;
+        margin-top: 10px; font-family: 'Courier New', Courier, monospace;
+        transition: 0.2s;
+    }
+    button.hackBtn:hover { background: white; box-shadow: 0 0 10px white; }
+
+    button.closePanel {
+        background: transparent; color: red; border: 1px solid red; margin-top: 20px;
+    }
+    button.closePanel:hover { background: red; color: white; }
+
+</style>
+</head>
+<body>
+
+    <div id="startMenu">
+        <div id="gameTitle">FLAPPY BIRD</div>
+        <button id="startBtn" onclick="startGame()">START GAME</button>
+    </div>
+
+    <div id="scoreBoard" title="Hidden Access...">Score: 0</div>
+    <button id="exitBtn" onclick="returnToMenu()">EXIT</button>
+    
+    <div id="message">GAME OVER<br><span style="font-size:25px;color:gold">Click or Press Space</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="passwordPanel" class="hackerOverlay">
+        <div class="panelBox">
+            <h2>SECURITY CHECK</h2>
+            <p>ENTER ACCESS CODE:</p>
+            <input type="password" id="passInput" class="hackInput" placeholder="****" maxlength="4">
+            <button class="hackBtn" onclick="checkPassword()">LOGIN</button>
+            <button class="hackBtn closePanel" onclick="closeAllPanels()">CANCEL</button>
+        </div>
+    </div>
+
+    <div id="controlPanel" class="hackerOverlay">
+        <div class="panelBox">
+            <h2>SYSTEM CONTROL</h2>
+            
+            <div style="margin: 20px 0; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                <p>GOD MODE: <span id="godStatus" style="color:red; font-weight:bold;">OFF</span></p>
+                <button class="hackBtn" onclick="toggleGodMode()">TOGGLE MODE</button>
+            </div>
+
+            <div>
+                <p>SCORE EDITOR</p>
+                <input type="number" id="scoreInput" class="hackInput" placeholder="100">
+                <button class="hackBtn" onclick="setScore()">UPDATE SCORE</button>
+            </div>
+
+            <button class="hackBtn closePanel" onclick="closeAllPanels()">CLOSE PANEL</button>
+        </div>
+    </div>
+
+<script>
+    var canvas = document.getElementById("gameCanvas");
+    var ctx = canvas.getContext("2d");
+    
+    var startMenu = document.getElementById("startMenu");
+    var scoreDiv = document.getElementById("scoreBoard");
+    var msgDiv = document.getElementById("message");
+    var passwordPanel = document.getElementById("passwordPanel");
+    var controlPanel = document.getElementById("controlPanel");
+    var passInput = document.getElementById("passInput");
+    var scoreInput = document.getElementById("scoreInput");
+    var godStatus = document.getElementById("godStatus");
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // --- RESİMLER ---
+    var birdImg = new Image(); birdImg.src = "https://raw.githubusercontent.com/samuelcust/flappy-bird-assets/master/sprites/yellowbird-midflap.png";
+    var bgImg = new Image(); bgImg.src = "https://raw.githubusercontent.com/samuelcust/flappy-bird-assets/master/sprites/background-day.png";
+    var pipeNorthImg = new Image(); pipeNorthImg.src = "https://raw.githubusercontent.com/samuelcust/flappy-bird-assets/master/sprites/pipe-green.png"; 
+    var fgImg = new Image(); fgImg.src = "https://raw.githubusercontent.com/samuelcust/flappy-bird-assets/master/sprites/base.png";
+
+    // --- OYUN DEĞİŞKENLERİ ---
+    var gap = 150;
+    var constant;
+    var bX = 100; var bY = 250;
+    var gravity = 0.4; var velocity = 0; var lift = -7;
+    var score = 0;
+    
+    var isGameRunning = false; 
+    var gameActive = true;     
+    var pipeSpacing = 400;
+
+    // --- HİLE VE OTURUM DEĞİŞKENLERİ ---
+    var godMode = false;
+    var isLoggedIn = false; // Şifrenin girilip girilmediğini takip eder
+    var clickCount = 0;
+    var clickTimer;
+
+    var pipe = [];
+    pipe[0] = { x : canvas.width, y : -100, scored: false };
+
+    // --- FONKSİYONLAR ---
+    function startGame() {
+        startMenu.style.display = "none";
+        isGameRunning = true;
+        
+        bY = 250; velocity = 0;
+        if(!godMode) score = 0; 
+        scoreDiv.innerHTML = "Score: " + score;
+        pipe = [];
+        pipe[0] = { x : canvas.width, y : -100, scored: false };
+        gameActive = true;
+        msgDiv.style.display = "none";
+        
+        draw();
+    }
+
+    function returnToMenu() {
+        if(confirm("Return to Main Menu? (Session will be closed)")) {
+            // HER ŞEYİ SIFIRLA VE OTURUMU KAPAT
+            isGameRunning = false;
+            startMenu.style.display = "flex";
+            msgDiv.style.display = "none";
+            
+            // Oyun verilerini sıfırla
+            bY = 250; velocity = 0; score = 0;
+            scoreDiv.innerHTML = "Score: 0";
+            
+            // Hile verilerini sıfırla
+            isLoggedIn = false; // Şifre tekrar istenecek
+            godMode = false;    // God mode kapanacak
+            godStatus.innerHTML = "OFF";
+            godStatus.style.color = "red";
+        }
+    }
+
+    // --- TIKLAMA İLE PANEL AÇMA ---
+    scoreDiv.addEventListener("click", function(e) {
+        e.stopPropagation();
+        clickCount++;
+        clearTimeout(clickTimer);
+        clickTimer = setTimeout(function() { clickCount = 0; }, 1000);
+
+        if (clickCount === 5) {
+            // EĞER ZATEN GİRİŞ YAPILDIYSA DİREKT KONTROL PANELİNİ AÇ
+            if (isLoggedIn) {
+                isGameRunning = false;
+                controlPanel.style.display = "flex";
+            } else {
+                openPasswordPanel();
+            }
+            clickCount = 0;
+        }
+    });
+
+    function openPasswordPanel() {
+        isGameRunning = false;
+        passwordPanel.style.display = "flex";
+        passInput.value = "";
+        passInput.focus();
+    }
+
+    function checkPassword() {
+        if (passInput.value === "5555") {
+            isLoggedIn = true; // BAŞARILI GİRİŞ KAYDEDİLDİ
+            passwordPanel.style.display = "none";
+            controlPanel.style.display = "flex";
+        } else {
+            alert("ACCESS DENIED");
+            passInput.value = "";
+        }
+    }
+
+    function closeAllPanels() {
+        passwordPanel.style.display = "none";
+        controlPanel.style.display = "none";
+        if (startMenu.style.display === "none") {
+            isGameRunning = true;
+            if(godMode) velocity = lift; 
+            draw();
+        }
+    }
+
+    function toggleGodMode() {
+        godMode = !godMode;
+        if(godMode) {
+            godStatus.innerHTML = "ON";
+            godStatus.style.color = "#00ff00";
+        } else {
+            godStatus.innerHTML = "OFF";
+            godStatus.style.color = "red";
+        }
+    }
+
+    function setScore() {
+        var val = parseInt(scoreInput.value);
+        if (!isNaN(val)) {
+            score = val;
+            scoreDiv.innerHTML = "Score: " + score;
+            alert("SCORE UPDATED");
+        }
+    }
+
+    document.addEventListener("keydown", action);
+    document.addEventListener("click", action);
+
+    function action(e) {
+        if(!isGameRunning || passwordPanel.style.display === "flex" || controlPanel.style.display === "flex") return;
+        if(e.target.tagName === "BUTTON" || e.target.tagName === "INPUT") return;
+
+        if (!gameActive) {
+             if(msgDiv.style.display === "block") resetGame();
+             return;
+        }
+
+        if (e.type === "click" || e.code === "Space") {
+            velocity = lift;
+        }
+    }
+
+    function resetGame() {
+        bY = 250; velocity = 0;
+        if(!godMode) score = 0; 
+        gameActive = true;
+        pipe = [];
+        pipe[0] = { x : canvas.width, y : -100, scored: false };
+        msgDiv.style.display = "none";
+        scoreDiv.innerHTML = "Score: " + score;
+        draw();
+    }
+
+    function draw() {
+        if(!isGameRunning) return; 
+
+        var bgWidth = bgImg.width || 288;
+        var numBg = Math.ceil(canvas.width / bgWidth) + 1;
+        for (var k = 0; k < numBg; k++) {
+            ctx.drawImage(bgImg, k * bgWidth, 0, bgWidth, canvas.height);
+        }
+
+        // --- BORULARI ÇİZ (TEXTURE UZATMA SİSTEMİ) ---
+        for(var i = 0; i < pipe.length; i++){
+            constant = pipeNorthImg.height + gap;
+            
+            // 1. ÜST BORU
+            // Uzatma (Yukarı)
+            if (pipe[i].y < 0) {
+                 ctx.drawImage(pipeNorthImg, 
+                    0, pipeNorthImg.height - 1, pipeNorthImg.width, 1, 
+                    pipe[i].x, -1000, pipeNorthImg.width, 1000 + pipe[i].y 
+                 );
+            }
+            // Ana Gövde
+            ctx.save(); 
+            ctx.translate(pipe[i].x + pipeNorthImg.width/2, pipe[i].y + pipeNorthImg.height); 
+            ctx.scale(1, -1); 
+            ctx.drawImage(pipeNorthImg, -pipeNorthImg.width/2, 0); 
+            ctx.restore(); 
+
+            // 2. ALT BORU
+            // Ana Gövde
+            ctx.drawImage(pipeNorthImg, pipe[i].x, pipe[i].y + constant);
+            // Uzatma (Aşağı)
+            var pipeBottomEnd = pipe[i].y + constant + pipeNorthImg.height;
+            if (pipeBottomEnd < canvas.height) {
+                ctx.drawImage(pipeNorthImg, 
+                    0, pipeNorthImg.height - 1, pipeNorthImg.width, 1, 
+                    pipe[i].x, pipeBottomEnd, pipeNorthImg.width, canvas.height 
+                );
+            }
+
+            if (gameActive) pipe[i].x -= 3;
+
+            if(pipe[i].x < canvas.width - pipeSpacing && pipe.length < 5 && pipe[pipe.length-1].x < canvas.width - pipeSpacing){ 
+                pipe.push({
+                    x : canvas.width,
+                    y : Math.floor(Math.random() * pipeNorthImg.height) - pipeNorthImg.height,
+                    scored: false
+                });
+            }
+
+            if (pipe[i].x + pipeNorthImg.width < bX && !pipe[i].scored) {
+                score++;
+                scoreDiv.innerHTML = "Score: " + score;
+                pipe[i].scored = true;
+            }
+
+            if (!godMode) {
+                var floorY = canvas.height - 100;
+                if( (bX + 34 >= pipe[i].x && bX <= pipe[i].x + 52 && 
+                    (bY <= pipe[i].y + pipeNorthImg.height || bY+24 >= pipe[i].y + constant)) || 
+                    bY + 24 >= floorY) {
+                    gameActive = false;
+                }
+            }
+
+            if (pipe[i].x < -60) { pipe.shift(); i--; }
+        }
+
+        var fgWidth = fgImg.width || 336;
+        var numFg = Math.ceil(canvas.width / fgWidth) + 1;
+        var floorY = canvas.height - 100;
+        for (var j = 0; j < numFg; j++) {
+            ctx.drawImage(fgImg, j * fgWidth, floorY, fgWidth, 112);
+        }
+
+        if (gameActive) {
+            velocity += gravity;
+            bY += velocity;
+
+            if (bY < 0) { bY = 0; velocity = 0; }
+            
+            if (godMode) {
+                if(bY + 24 >= floorY) {
+                    bY = floorY - 24; 
+                    velocity = 0;     
+                }
+            }
+
+            ctx.save();
+            ctx.translate(bX + 17, bY + 12);
+            var rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (velocity * 0.1)));
+            ctx.rotate(rotation);
+            ctx.drawImage(birdImg, -17, -12);
+            ctx.restore();
+            
+            requestAnimationFrame(draw);
+        } else {
+            ctx.drawImage(birdImg, bX, bY);
+            msgDiv.style.display = "block";
+        }
+    }
+
+</script>
+</body>
+</html>
